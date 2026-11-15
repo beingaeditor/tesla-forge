@@ -12,6 +12,8 @@ export class ReviewManager implements vscode.TextDocumentContentProvider, vscode
   private pending = new Map<string, { proposal: Proposal; resolve: () => void }>();
   private docChange = new vscode.EventEmitter<vscode.Uri>();
   private lensChange = new vscode.EventEmitter<void>();
+  /** Diff tabs still opening, so a fast decision cannot leave a tab behind by closing before it exists. */
+  private opening = new Map<string, Promise<unknown>>();
   readonly onDidChange = this.docChange.event;
   readonly onDidChangeCodeLenses = this.lensChange.event;
 
@@ -84,7 +86,11 @@ export class ReviewManager implements vscode.TextDocumentContentProvider, vscode
 
   async openDiff(p: Proposal): Promise<void> {
     const title = `${p.path} — proposed change (${p.hunks.length} hunk${p.hunks.length === 1 ? "" : "s"})`;
-    await vscode.commands.executeCommand("vscode.diff", this.uri("p", p.id, p.path, "left"), this.uri("p", p.id, p.path, "right"), title, { preview: false, preserveFocus: false });
+    const opened = Promise.resolve(vscode.commands.executeCommand("vscode.diff", this.uri("p", p.id, p.path, "left"), this.uri("p", p.id, p.path, "right"), title, { preview: false, preserveFocus: false })).catch(() => undefined);
+    this.opening.set(p.id, opened);
+    await opened;
+    if (this.opening.get(p.id) === opened) this.opening.delete(p.id);
+    if (!this.pending.has(p.id)) await this.closeTabs((q) => q.get("p") === p.id); // decided while it was opening
   }
 
   async openStagedDiff(relPath: string): Promise<void> {
@@ -109,7 +115,7 @@ export class ReviewManager implements vscode.TextDocumentContentProvider, vscode
     this.updateContext();
     this.lensChange.fire();
     entry.resolve();
-    void this.closeTabs((q) => q.get("p") === proposalId);
+    void Promise.resolve(this.opening.get(proposalId)).then(() => this.closeTabs((q) => q.get("p") === proposalId));
   }
 
   decide(proposalId: string, hunkId: number, accept: boolean): void {
@@ -163,7 +169,7 @@ export class ReviewManager implements vscode.TextDocumentContentProvider, vscode
   /** The run ended or was stopped: release every waiting review and remove the previews. */
   closeAll(): void {
     for (const id of [...this.pending.keys()]) this.finish(id);
-    void this.closeTabs(() => true);
+    void Promise.all(this.opening.values()).then(() => this.closeTabs(() => true));
   }
 
   private async closeTabs(match: (query: URLSearchParams) => boolean): Promise<void> {

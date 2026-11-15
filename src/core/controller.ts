@@ -137,9 +137,10 @@ export class ForgeController implements ToolHost {
       const pack = assembleContext(this.index(), inline ? (text.match(/(?:^|\s)@\S+/g) ?? []).join(" ") : text, cfg.contextBudgetChars, pinned);
       this.transcript.push({ kind: "context", pack });
       const request = inline
-        ? `<inline-edit file="${inline.path}" selected_lines="${inline.startLine}-${inline.endLine}">\nThe user selected lines ${inline.startLine}-${inline.endLine} of ${inline.path} (shown above) and gave this instruction:\n${text}\n\nMake the change with one propose_edit call on ${inline.path}. Every changed line must be inside the selected lines. Do not edit other files and do not run tests.\n</inline-edit>`
-        : `<request>\n${text}\n</request>`;
-      content = [renderContext(pack), request].filter(Boolean).join("\n\n");
+        ? `Inline edit of ${inline.path} lines ${inline.startLine}-${inline.endLine}: ${text}\n\n<inline-edit file="${inline.path}" selected_lines="${inline.startLine}-${inline.endLine}">\nThe user selected lines ${inline.startLine}-${inline.endLine} of ${inline.path} (shown below) and gave this instruction:\n${text}\n\nMake the change with one propose_edit call on ${inline.path}. Every changed line must be inside the selected lines. Do not edit other files and do not run tests.\n</inline-edit>`
+        : text;
+      // The request goes first so the TrueForge session is titled by what the user asked.
+      content = [request, renderContext(pack)].filter(Boolean).join("\n\n");
     } catch (err) {
       this.running = false;
       this.note("error", `Could not read the workspace: ${(err as Error).message}`);
