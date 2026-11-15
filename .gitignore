@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-test/
+.trueforge/
+.vscode-test/
+*.vsix
+*.log
+.env
+agent/model-providers.local.json
+fixtures/

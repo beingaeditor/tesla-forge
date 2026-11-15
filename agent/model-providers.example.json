@@ -1,0 +1,23 @@
+{
+  "_comment": "Example model configuration. Copy to agent/model-providers.local.json (git-ignored), replace the placeholders, then run: npm run setup:agent -- --providers agent/model-providers.local.json --model <provider>/<model> [--fallback-model <provider>/<model>]. You can equally configure providers in the TrueForge UI under Settings > Models and skip this file. Never commit real keys.",
+  "providers": [
+    {
+      "type": "custom",
+      "name": "primary",
+      "baseUrl": "https://YOUR-OPENAI-COMPATIBLE-ENDPOINT/v1",
+      "auth": { "apiKey": "YOUR_API_KEY" },
+      "models": [
+        { "name": "main", "modelId": "PROVIDER_MODEL_ID", "properties": { "contextLength": 128000, "maxOutputTokens": 8192 } }
+      ]
+    },
+    {
+      "type": "custom",
+      "name": "local",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "auth": { "apiKey": "not-needed-for-local" },
+      "models": [
+        { "name": "coder", "modelId": "LOCAL_MODEL_ID", "properties": { "contextLength": 32000, "maxOutputTokens": 4096 } }
+      ]
+    }
+  ]
+}

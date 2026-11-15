@@ -1,0 +1,256 @@
+{
+  "name": "tesla-forge",
+  "displayName": "Tesla Forge",
+  "description": "Editor-native coding agent for VS Code whose agent loop runs on TrueForge.",
+  "version": "0.1.0",
+  "publisher": "team-tesla",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=22.14.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "teslaForge",
+          "title": "Tesla Forge",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "teslaForge": [
+        {
+          "id": "teslaForge.panel",
+          "name": "Agent",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "teslaForge.inlineEdit",
+        "title": "Inline Edit Selection",
+        "category": "Tesla Forge"
+      },
+      {
+        "command": "teslaForge.stop",
+        "title": "Stop Generation",
+        "category": "Tesla Forge",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "teslaForge.acceptHunk",
+        "title": "Accept Hunk at Cursor",
+        "category": "Tesla Forge",
+        "icon": "$(check)"
+      },
+      {
+        "command": "teslaForge.rejectHunk",
+        "title": "Reject Hunk at Cursor",
+        "category": "Tesla Forge",
+        "icon": "$(close)"
+      },
+      {
+        "command": "teslaForge.acceptAll",
+        "title": "Accept All Hunks",
+        "category": "Tesla Forge",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "teslaForge.rejectAll",
+        "title": "Reject All Hunks",
+        "category": "Tesla Forge",
+        "icon": "$(close-all)"
+      },
+      {
+        "command": "teslaForge.submitReview",
+        "title": "Finish Review (undecided hunks are rejected)",
+        "category": "Tesla Forge",
+        "icon": "$(pass)"
+      },
+      {
+        "command": "teslaForge.apply",
+        "title": "Apply Accepted Edits",
+        "category": "Tesla Forge",
+        "icon": "$(save-all)"
+      },
+      {
+        "command": "teslaForge.undoApply",
+        "title": "Undo Last Applied Edit",
+        "category": "Tesla Forge",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "teslaForge.discard",
+        "title": "Discard Staged Edits",
+        "category": "Tesla Forge"
+      },
+      {
+        "command": "teslaForge.newChat",
+        "title": "New Chat",
+        "category": "Tesla Forge"
+      },
+      {
+        "command": "teslaForge.openSession",
+        "title": "Open TrueForge Session",
+        "category": "Tesla Forge"
+      },
+      {
+        "command": "teslaForge.registerTools",
+        "title": "Register Workspace Tools with TrueForge",
+        "category": "Tesla Forge"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "teslaForge.inlineEdit",
+        "key": "ctrl+alt+k",
+        "mac": "cmd+alt+k",
+        "when": "editorTextFocus && editorHasSelection"
+      },
+      {
+        "command": "teslaForge.stop",
+        "key": "ctrl+alt+backspace",
+        "mac": "cmd+alt+backspace",
+        "when": "teslaForge.running"
+      },
+      {
+        "command": "teslaForge.acceptHunk",
+        "key": "ctrl+alt+y",
+        "mac": "cmd+alt+y",
+        "when": "resourceScheme == tesla-forge-proposal && teslaForge.reviewing"
+      },
+      {
+        "command": "teslaForge.rejectHunk",
+        "key": "ctrl+alt+n",
+        "mac": "cmd+alt+n",
+        "when": "resourceScheme == tesla-forge-proposal && teslaForge.reviewing"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "teslaForge.acceptHunk",
+          "when": "resourceScheme == tesla-forge-proposal && teslaForge.reviewing",
+          "group": "navigation@1"
+        },
+        {
+          "command": "teslaForge.rejectHunk",
+          "when": "resourceScheme == tesla-forge-proposal && teslaForge.reviewing",
+          "group": "navigation@2"
+        },
+        {
+          "command": "teslaForge.acceptAll",
+          "when": "resourceScheme == tesla-forge-proposal && teslaForge.reviewing",
+          "group": "navigation@3"
+        },
+        {
+          "command": "teslaForge.rejectAll",
+          "when": "resourceScheme == tesla-forge-proposal && teslaForge.reviewing",
+          "group": "navigation@4"
+        },
+        {
+          "command": "teslaForge.apply",
+          "when": "resourceScheme == tesla-forge-proposal && teslaForge.canApply",
+          "group": "navigation@5"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Tesla Forge",
+      "properties": {
+        "teslaForge.trueforgeUrl": {
+          "type": "string",
+          "default": "http://localhost:8790",
+          "description": "Base URL of the local TrueForge server."
+        },
+        "teslaForge.agent": {
+          "type": "string",
+          "default": "tesla-forge",
+          "description": "Name of the saved TrueForge agent to run. The model is configured on the agent in TrueForge, not here."
+        },
+        "teslaForge.fallbackAgent": {
+          "type": "string",
+          "default": "tesla-forge-fallback",
+          "description": "Saved TrueForge agent (normally the same definition on a second model) used automatically when the primary agent's model fails. Empty disables fallback."
+        },
+        "teslaForge.mcpPort": {
+          "type": "number",
+          "default": 8795,
+          "description": "Local port for the workspace MCP server that TrueForge connects to."
+        },
+        "teslaForge.contextBudgetChars": {
+          "type": "number",
+          "default": 24000,
+          "description": "Total size budget (characters, about 4 per token) for the context assembled before the first model call."
+        },
+        "teslaForge.toolResponseCapChars": {
+          "type": "number",
+          "default": 8000,
+          "description": "Cap (characters) on every later search or read tool response."
+        },
+        "teslaForge.testCommands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "python -m pytest",
+            "pytest",
+            "npm test"
+          ],
+          "description": "Command prefixes the agent may ask to run through the run_tests tool. Every run still needs your approval."
+        },
+        "teslaForge.testTimeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "description": "Maximum runtime of an approved test command."
+        },
+        "teslaForge.maxRetries": {
+          "type": "number",
+          "default": 1,
+          "description": "Retries with backoff on a transient model failure before falling back or reporting the error."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "diffEditor.codeLens": true
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/build.mjs --tests && node --test \"dist-test/unit/*.test.js\"",
+    "test:integration": "node scripts/build.mjs --tests && node dist-test/integration.js",
+    "test:host": "node scripts/host-test.mjs",
+    "trueforge": "node scripts/start-trueforge.mjs",
+    "context": "node dist-test/context-cli.js",
+    "mock-model": "node scripts/mock-model.mjs",
+    "setup:agent": "node scripts/setup-trueforge.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@truefoundry/trueforge-sdk": "0.185.0",
+    "diff": "8.0.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@truefoundry/trueforge": "0.185.1",
+    "@types/node": "^22.0.0",
+    "@types/vscode": "1.90.0",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.0"
+  }
+}
