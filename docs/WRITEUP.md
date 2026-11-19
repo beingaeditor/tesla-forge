@@ -70,7 +70,7 @@ Models are configured only in TrueForge, as a catalog provider or an OpenAI-comp
 
 ## 7. Tools used
 
-- Claude Fable 5.2 and Claude Opus 5.5 through Claude Code (AI coding assistants) for implementation, tests, real-model verification and drafting this document. **[FILL: any other assistants or tools the team used]**
+- Claude Fable 5.2 and Claude Opus 5.5 through Claude Code (AI coding assistants) for implementation, tests, real-model verification and drafting this document. No other AI assistants were used.
 - TrueForge 0.185.1 and its TypeScript SDK 0.185.0; Model Context Protocol TypeScript SDK 1.32.2; VS Code 1.144; Node.js 24; esbuild; TypeScript; `@vscode/test-electron`.
 
 ## 8. Known limitations and what we would do with another month
