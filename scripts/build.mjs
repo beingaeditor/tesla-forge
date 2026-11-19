@@ -14,6 +14,7 @@ if (process.argv.includes("--tests")) {
   const unit = fs.readdirSync(path.join(root, "test/unit")).filter((f) => f.endsWith(".test.ts")).map((f) => `test/unit/${f}`);
   await build({ ...common, entryPoints: unit, outdir: "dist-test/unit" });
   await build({ ...common, entryPoints: ["test/integration/integration.ts"], outfile: "dist-test/integration.js" });
+  await build({ ...common, entryPoints: ["test/tools/task-run.ts"], outfile: "dist-test/task-run.js" });
   await build({ ...common, entryPoints: ["test/tools/context-cli.ts"], outfile: "dist-test/context-cli.js" });
   await build({ ...common, entryPoints: ["test/host/suite.ts"], outfile: "dist-test/host-suite.js", external: ["vscode"] });
 }

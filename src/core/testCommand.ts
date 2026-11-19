@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { spawn } from "node:child_process";
 
 /**
@@ -11,6 +13,8 @@ export function validateTestCommand(command: string, allowedPrefixes: string[]):
   const argv = cmd.match(/"[^"]*"|\S+/g)?.map((t) => t.replace(/^"|"$/g, "")) ?? [];
   const prefix = allowedPrefixes.map((p) => p.trim().split(/\s+/)).find((p) => p.length && p.every((tok, i) => argv[i] === tok));
   if (!prefix) return { ok: false, error: `Only these test commands may be run: ${allowedPrefixes.join(", ")}.` };
+  const interactive = argv.slice(prefix.length).find((a) => /^--(pdb|trace|pdbcls)\b|^--(watch|looponfail)\b|^-i$/.test(a));
+  if (interactive) return { ok: false, error: `"${interactive}" starts an interactive session and cannot be used here.` };
   const bad = argv.slice(prefix.length).find((a) => a.split(/[=,]/).some((part) => part.startsWith("/") || /^[A-Za-z]:/.test(part) || part.split("/").includes("..")));
   if (bad) return { ok: false, error: `Argument "${bad}" points outside the workspace.` };
   return { ok: true, argv };
@@ -26,7 +30,8 @@ export function runTestCommand(argv: string[], cwd: string, timeoutMs: number, c
   return new Promise((resolve) => {
     // shell:true is needed on Windows for .cmd shims (npm, pytest.exe wrappers); metacharacters were rejected above.
     const quoted = argv.map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(" ");
-    const child = process.platform === "win32" ? spawn(quoted, { cwd, shell: true, windowsHide: true }) : spawn(argv[0], argv.slice(1), { cwd });
+    const env = withWorkspaceVenv(cwd);
+    const child = process.platform === "win32" ? spawn(quoted, { cwd, shell: true, windowsHide: true, env }) : spawn(argv[0], argv.slice(1), { cwd, env });
     let out = "";
     let timedOut = false;
     const kill = () => {
@@ -55,4 +60,23 @@ export function runTestCommand(argv: string[], cwd: string, timeoutMs: number, c
     });
     child.on("close", finish);
   });
+}
+
+/**
+ * Run tests with the workspace's own Python virtual environment when it has one
+ * (.venv, venv, env), the way an activated terminal would, so the right test runner is used.
+ */
+export function withWorkspaceVenv(root: string): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  const bin = process.platform === "win32" ? "Scripts" : "bin";
+  for (const name of [".venv", "venv", "env"]) {
+    const dir = path.join(root, name, bin);
+    if (!fs.existsSync(path.join(dir, process.platform === "win32" ? "python.exe" : "python"))) continue;
+    const key = Object.keys(env).find((k) => k.toUpperCase() === "PATH") ?? "PATH";
+    env[key] = `${dir}${path.delimiter}${env[key] ?? ""}`;
+    env.VIRTUAL_ENV = path.join(root, name);
+    delete env.PYTHONHOME;
+    break;
+  }
+  return env;
 }

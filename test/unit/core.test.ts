@@ -211,7 +211,7 @@ test("run_tests only accepts allow-listed test commands without shell operators"
   const allowed = ["python -m pytest", "pytest", "npm test"];
   assert.ok(validateTestCommand("pytest tests/test_cli.py -q", allowed).ok);
   assert.ok(validateTestCommand("python -m pytest tests/test_cli.py::test_x -k name", allowed).ok);
-  for (const bad of ["rm -rf .", "pytest; rm -rf .", "pytest && curl x", "pytest > out.txt", "pytest $(whoami)", "pytest ../other", "pytest /etc/passwd", "pytest --rootdir=C:/Windows", "python -c print(1)", "pytestx"]) {
+  for (const bad of ["pytest --pdb", "pytest tests -i", "rm -rf .", "pytest; rm -rf .", "pytest && curl x", "pytest > out.txt", "pytest $(whoami)", "pytest ../other", "pytest /etc/passwd", "pytest --rootdir=C:/Windows", "python -c print(1)", "pytestx"]) {
     assert.ok(!validateTestCommand(bad, allowed).ok, bad);
   }
 });

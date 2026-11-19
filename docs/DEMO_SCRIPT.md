@@ -4,9 +4,16 @@ Rules from the rulebook: tasks A, B, C in that order; each followed by its on-sc
 
 ## Before recording
 
-1. `npm run trueforge` is running. `npm run setup:agent -- --list` shows your models. `tesla-forge` and `tesla-forge-fallback` exist on two different working models.
-2. Flask fixture is at tag 3.1.3 with a venv (see README), `git status` is clean, and `python -m pytest tests/test_cli.py -q` passes (55 passed at baseline).
-3. Launch the extension on the fixture: `code --extensionDevelopmentPath=<repo> <flask-fixture>`. Open the Tesla Forge panel. Open a terminal in VS Code with the venv activated.
+1. `npm run trueforge` is running, with the Gemini key saved in TrueForge.
+2. Set the agents for Tasks A and B:
+   ```bash
+   npm run setup:agent -- --model google-gemini/gemini-flash-lite-latest --fallback-model google-gemini/gemma-4-31b-it
+   ```
+3. The Flask fixture is at `C:\Users\samee\forge-flask` (tag 3.1.3, venv in `.venv`). Check `git status` is clean, then `.venv\Scripts\python -m pytest tests/test_cli.py -q` (55 passed at baseline).
+4. Launch the extension on the fixture: `code --extensionDevelopmentPath=<repo> C:\Users\samee\forge-flask`. Open the Tesla Forge panel. Open a VS Code terminal and run `.venv\Scripts\activate`.
+5. **Free-tier quota.** Gemini's free tier limits tokens per minute. Wait a few minutes after any rehearsal before recording Task B. If the panel says "rate limiting… waiting Ns", that wait is model waiting time; the rules let you cut model waiting, but **not** the stretch from sending the prompt to the first diff appearing. In testing, the first Task B diff appeared after 90–160 s.
+6. Task B is not deterministic. If the model's new test fails when the agent runs it, it usually fixes it in the same turn. If the final run still fails, reset with `git checkout .` and record again.
+7. During Task B the agent asks to run `python -m pytest tests/test_cli.py -q`. Click **Run**: your accepted edits are put in place for that run and restored afterwards.
 4. Create a synthetic app outside the repo for Task B verification, for example `%TEMP%\demoapp.py`:
    ```python
    from flask import Flask
@@ -32,11 +39,11 @@ Rules from the rulebook: tasks A, B, C in that order; each followed by its on-sc
 | 2:25 | B | **Apply accepted edits**. Terminal: `git status --short`. | Three or more changed files. |
 | 2:35 | B | `python -m pytest tests/test_cli.py -q` | All passing. |
 | 2:45 | B | `flask --help`, then `flask --app <path>\demoapp.py config` | `config` in the command list; JSON with `"***"` for SECRET_KEY, DB_PASSWORD, API_TOKEN and the real SITE_NAME. |
-| 3:00 | C | `git stash -u` or `git checkout .` to return to a clean fixture (may be cut). In TrueForge **Settings → Models**, set an invalid key on the primary provider. Show it. | The broken configuration. |
+| 3:00 | C | `git checkout .` to return to a clean fixture (may be cut). Run `npm run setup:agent -- --add-unreachable-provider --model unreachable/model --fallback-model google-gemini/gemini-flash-lite-latest`, then show the agent `tesla-forge` on model `unreachable/model` in the TrueForge UI (Agents). | The broken configuration. |
 | 3:10 | C | Repeat Task A exactly: select `get_debug_flag`, `Ctrl+Alt+K`, paste the Task A prompt. | Editor stays usable (scroll or type in another file while waiting). |
-| 3:20 | C | Either the panel notice "falling back to agent tesla-forge-fallback" and then a diff, or the clear error "No files were changed". Do not apply. | The message or the automatic fallback. |
+| 3:20 | C | The panel shows "Primary agent failed. Automatically falling back to agent tesla-forge-fallback", then the diff appears. Do not apply. | The automatic fallback. |
 | 3:35 | C | Terminal: `git status` | Nothing changed. |
-| 3:42 | C+ | Restore the key. Send any agent request, press **Stop** while tokens are streaming. Then `git status`. | Immediate stop; clean workspace. |
+| 3:42 | C+ | Send any agent request, press **Stop** while tokens are streaming. Then `git status`. | Immediate stop; clean workspace. |
 | 3:55 | | End. | |
 
 ## Exact prompts

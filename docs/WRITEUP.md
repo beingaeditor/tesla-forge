@@ -37,16 +37,19 @@ Two layers, both with a hard size limit.
 2. Automatic retrieval fills the rest. The prompt is turned into weighted terms (identifiers and quoted strings count double, stop words are dropped, simple stems are added). Every text file in the workspace is scored on three kinds of evidence, strongest first: a symbol definition named like a term; a file or folder named like a term; and BM25 text relevance, so rare terms count more and long files do not win by length. Adjacent query words found together ("cli command") add a bonus. Changelog and licence files are down-weighted. If the best test file or the best documentation file is a real match but fell outside the top eight, it replaces the weakest pick, because a change usually spans code, tests and docs.
 3. The budget is split across the top eight files in proportion to score, and within each file the highest-scoring line windows are taken, preferring definitions.
 
-**Later tool responses (cap 8,000 characters each, configurable).** `search_workspace` uses the same ranking and returns the top files with the reason each was chosen plus excerpts. `read_file` returns numbered lines in bounded pieces.
+**Later tool responses (cap 6,000 characters each, configurable).** `search_workspace` uses the same ranking and returns the top files with the reason each was chosen plus excerpts. `read_file` returns numbered lines in bounded pieces.
 
-The panel shows the selected files, line ranges, reasons, and budget used for every request, and every search result lists its reasons, so the choice is visible in Task B. There are no repository-specific rules. Dependency, build and VCS folders are skipped, and links are not followed. We chose a lexical index over embeddings because it needs no second model, builds in about 0.2 s on Flask, is explainable line by line, and behaves the same with whatever model the judges pick. On the exact Task B prompt it selects `src/flask/cli.py`, `tests/test_cli.py` and `docs/cli.rst` among its eight files, using 21,571 of 24,000 characters.
+The panel shows the selected files, line ranges, reasons, and budget used for every request, and every search result lists its reasons, so the choice is visible in Task B. There are no repository-specific rules. Dependency, build and VCS folders are skipped, and links are not followed. We chose a lexical index over embeddings because it needs no second model, builds in about 0.2 s on Flask, is explainable line by line, and behaves the same with whatever model the judges pick. On the exact Task B prompt it selects `src/flask/cli.py`, `tests/test_cli.py` and `docs/cli.rst` among its eight files, using 21,571 of 24,000 characters. With Gemini Flash-Lite the agent then changed exactly those three files.
 
 ## 5. Model setup
 
 | Model | Where it ran | Role | Approximate cost |
 | --- | --- | --- | --- |
-| **[FILL]** | **[FILL]** | primary (`tesla-forge`) | **[FILL]** |
-| **[FILL]** | **[FILL]** | fallback (`tesla-forge-fallback`) | **[FILL]** |
+| Gemini Flash-Lite (`google-gemini/gemini-flash-lite-latest`) | Google AI Studio API, free tier, through TrueForge's catalog provider | primary for Tasks A and B; fallback in Task C | $0 |
+| Gemma 4 31B (`google-gemini/gemma-4-31b-it`) | same provider, free tier | fallback for Tasks A and B | $0 |
+| Gemini 3.6 Flash and 3.5 Flash | same provider, free tier | early trials; free daily request cap reached | $0 |
+
+For Task C the primary agent is pointed at a provider whose endpoint is unreachable: `npm run setup:agent -- --add-unreachable-provider --model unreachable/model --fallback-model google-gemini/gemini-flash-lite-latest`.
 
 Models are configured only in TrueForge, as a catalog provider or an OpenAI-compatible endpoint. To switch, change the model on the agent in the TrueForge UI or rerun `npm run setup:agent -- --model <provider>/<model>`. The extension has no model setting. A scripted mock endpoint was used for automated tests only; it is not a model and is not shown in the demo.
 
@@ -59,7 +62,7 @@ Models are configured only in TrueForge, as a catalog provider or an OpenAI-comp
 | A3 Streaming and cancellation | **[FILL]** | Tokens stream from TrueForge events; Stop is immediate and `git status` is clean afterwards. |
 | B1 Context assembly | **[FILL]** | Budgeted retrieval; the panel lists the chosen files and why during Task B. |
 | B2 Diff safety | **[FILL]** | Per-hunk review, nothing written before Apply, and a working undo shown on screen. |
-| B3 Resilience | **[FILL]** | **[FILL: claim only what the video shows: "automatic fallback to a second configured model" or "retry with backoff, then a clear error"]**; workspace unchanged. |
+| B3 Resilience | **[FILL]** | Unreachable endpoint: one retry, then automatic fallback to a second configured model with no user action; workspace unchanged. |
 | B4 TrueForge integration depth | **[FILL]** | MCP tools, TrueForge approval driving diff review, and deferred tool loading visible in the session. |
 | C1 Video | whole video | Tasks A, B, C in order, each verified on screen. |
 | C2 Write-up | this document | Architecture, context strategy, model setup, trade-offs, scorecard, limitations. |
@@ -73,9 +76,10 @@ Models are configured only in TrueForge, as a catalog provider or an OpenAI-comp
 
 - **Lexical retrieval only.** It can miss code that uses different words from the request. Next: use the editor's language servers for definitions and references, and add an optional embedding index behind the same budget.
 - **Existing text files only.** The agent cannot create, delete or rename files, so a task that needs a new file must extend an existing one. Next: reviewed file creation.
-- **Tests run against disk.** Edits accepted during a turn are staged, so the agent cannot test them until the user applies. Next: run tests against a temporary copy with the staged edits.
+- **Testing staged edits writes files briefly.** So the agent can check its work, an approved test run puts the accepted edits in place and restores the exact bytes afterwards, also on Stop. A crash of VS Code during that window could leave them in place. Next: run tests in a temporary copy of the workspace.
+- **Free-tier limits.** Gemini's free tier limits tokens per minute and caps some models at 20 requests a day. The extension waits and continues the same session on a rate limit, but a long Task B can take several minutes.
 - **One run and one window at a time.** The MCP connector name is shared, so a second VS Code window would take over the registration.
 - **Fallback restarts the request.** A fallback opens a fresh session on the second agent and repeats the request; work the first model had done is discarded by design, which costs time.
 - **Ignore rules.** `.gitignore` is not read; a fixed list of dependency and build folders is skipped instead.
 - **Tested on Windows 11 only.** The code avoids platform-specific paths except for process handling in `run_tests`, but macOS and Linux were not exercised.
-- **Model quality varies.** The edit format (exact-line search and replace) is forgiving of trailing whitespace and of copied line-number prefixes, and errors are returned to the model so it can retry, but a small model may still need more than one attempt. **[FILL: what the team observed with its models]**
+- **Model quality varies.** The edit format (exact-line search and replace) is forgiving of trailing whitespace and of copied line-number prefixes, and errors are returned to the model so it can retry, but a small model may still need more than one attempt. With Gemini Flash-Lite, Task A succeeded every time; Task B produced the right command and docs every time, but twice wrote a failing test before the agent could run tests on its staged edits.

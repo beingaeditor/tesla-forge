@@ -137,7 +137,7 @@ export class ForgeController implements ToolHost {
       const pack = assembleContext(this.index(), inline ? (text.match(/(?:^|\s)@\S+/g) ?? []).join(" ") : text, cfg.contextBudgetChars, pinned);
       this.transcript.push({ kind: "context", pack });
       const request = inline
-        ? `Inline edit of ${inline.path} lines ${inline.startLine}-${inline.endLine}: ${text}\n\n<inline-edit file="${inline.path}" selected_lines="${inline.startLine}-${inline.endLine}">\nThe user selected lines ${inline.startLine}-${inline.endLine} of ${inline.path} (shown below) and gave this instruction:\n${text}\n\nMake the change with one propose_edit call on ${inline.path}. Every changed line must be inside the selected lines. Do not edit other files and do not run tests.\n</inline-edit>`
+        ? `Inline edit of ${inline.path} lines ${inline.startLine}-${inline.endLine}: ${text}\n\n<inline-edit file="${inline.path}" selected_lines="${inline.startLine}-${inline.endLine}">\nThe user selected lines ${inline.startLine}-${inline.endLine} of ${inline.path} (shown below) and gave this instruction:\n${text}\n\nThe selected lines below are copied exactly from the file, so you already have everything you need: do not search or read files. Respond immediately with one propose_edit call on ${inline.path}, quoting the selected lines you change as old_text. Every changed line must be inside the selected lines. Do not edit other files and do not run tests.\n</inline-edit>`
         : text;
       // The request goes first so the TrueForge session is titled by what the user asked.
       content = [request, renderContext(pack)].filter(Boolean).join("\n\n");
@@ -197,6 +197,7 @@ export class ForgeController implements ToolHost {
           this.host.changed();
         },
         approval: (attempt, call) => this.decide(attempt, call),
+        rateLimited: (_a, waitMs) => this.note("warn", `The model provider is rate limiting requests. Waiting ${Math.round(waitMs / 1000)}s, then continuing the same TrueForge session (nothing is lost).`),
       },
     );
     this.run = run;

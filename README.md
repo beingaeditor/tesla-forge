@@ -95,14 +95,15 @@ On start the extension launches its MCP server on `127.0.0.1:8795` and registers
 | Stop | **Stop** in the panel or `Ctrl+Alt+Backspace`. Proposals from that run are discarded. |
 | See the session | Click the session link in the panel, or run **Tesla Forge: Open TrueForge Session**. |
 
-Settings (`teslaForge.*`): `trueforgeUrl`, `agent`, `fallbackAgent`, `mcpPort`, `contextBudgetChars` (default 24000), `toolResponseCapChars` (default 8000), `testCommands`, `testTimeoutSeconds`, `maxRetries`.
+Settings (`teslaForge.*`): `trueforgeUrl`, `agent`, `fallbackAgent`, `mcpPort`, `contextBudgetChars` (default 24000), `toolResponseCapChars` (default 6000), `testCommands`, `testTimeoutSeconds`, `maxRetries`.
 
 ## Safety properties
 
 - File access is limited to the open workspace. Traversal, absolute paths outside it, `.git`, and paths that leave it through a symlink or junction are refused. Search does not follow links.
 - A proposal is validated against the current editor content. If the file changes during review, the preview is regenerated when the edit still applies and rejected as stale when it does not.
 - Accepted hunks live in memory until Apply. A stopped or failed run discards what it proposed and staged, and late events or tool calls from it are ignored.
-- `run_tests` only runs allow-listed test commands with no shell operators, after a modal confirmation, with a time limit and capped output.
+- `run_tests` only runs allow-listed test commands with no shell operators or interactive flags, after a modal confirmation, with a time limit and capped output. It uses the workspace's `.venv` if there is one. Edits accepted in the current turn are put in place for the run and the exact previous bytes are restored afterwards, also on Stop.
+- On a provider rate limit the run waits as long as the provider asks and continues the same TrueForge session. Other model failures retry once, then fall back or stop with a clear error.
 - The MCP server binds to `127.0.0.1` and requires a random token in its URL.
 
 ## Tests
@@ -113,6 +114,7 @@ npm run trueforge         # in another terminal
 npm run test:integration  # core against a real TrueForge, with a scripted mock model
 npm run test:host         # the extension inside a real VS Code window
 npm run context -- /path/to/repo "your prompt"   # preview the selected context, no model needed
+npm run task -- /path/to/repo tesla-forge "your prompt"   # run a request headless against the real agent (accepts and applies every hunk)
 ```
 
 The mock model (`scripts/mock-model.mjs`) replays scripted responses so that streaming, approvals, cancellation and provider failure can be tested offline. It is test tooling only and is not used for the demo.

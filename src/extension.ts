@@ -28,7 +28,7 @@ export async function activate(context: vscode.ExtensionContext) {
       agent: c.get<string>("agent", "tesla-forge"),
       fallbackAgent: c.get<string>("fallbackAgent", "tesla-forge-fallback"),
       contextBudgetChars: c.get<number>("contextBudgetChars", 24000),
-      toolResponseCapChars: c.get<number>("toolResponseCapChars", 8000),
+      toolResponseCapChars: c.get<number>("toolResponseCapChars", 6000),
       maxRetries: c.get<number>("maxRetries", 1),
       testCommands: c.get<string[]>("testCommands", []),
       testTimeoutSeconds: c.get<number>("testTimeoutSeconds", 120),
@@ -36,7 +36,7 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   let confirmCommand = async (command: string): Promise<boolean> =>
-    (await vscode.window.showWarningMessage(`Tesla Forge: the agent wants to run a test command in this workspace:\n\n${command}`, { modal: true }, "Run")) === "Run";
+    (await vscode.window.showWarningMessage(`Tesla Forge: the agent wants to run a test command in this workspace:\n\n${command}\n\nEdits you accepted in this turn are put in place for the run and restored afterwards.`, { modal: true }, "Run")) === "Run";
   // eslint-disable-next-line prefer-const
   let panel: AgentPanel | undefined;
   // eslint-disable-next-line prefer-const

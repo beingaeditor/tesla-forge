@@ -3,6 +3,7 @@
 //   npm run setup:agent -- --model <provider>/<model> [--fallback-model <provider>/<model>]
 //                          [--providers agent/model-providers.local.json] [--url http://localhost:8790]
 //   npm run setup:agent -- --list        # show the models TrueForge has configured
+//   npm run setup:agent -- --add-unreachable-provider --model unreachable/model --fallback-model <provider>/<model>   # Task C
 //
 // The model lives on the TrueForge agent, never in the extension. The same definition is saved
 // twice when a fallback model is given: "tesla-forge" and "tesla-forge-fallback".
@@ -25,6 +26,12 @@ const reason = (e) => e?.body?.error?.message ?? e?.message ?? String(e);
 
 let models;
 try {
+  // For Task C: a provider whose endpoint is unreachable (nothing listens on port 9). The key is a
+  // synthetic placeholder, not a credential.
+  if (process.argv.includes("--add-unreachable-provider")) {
+    await client.settings.modelProviders.createOrUpdate({ manifest: { type: "custom", name: "unreachable", baseUrl: "http://127.0.0.1:9/v1", auth: { apiKey: "synthetic-not-a-real-key" }, models: [{ name: "model", modelId: "model", properties: { contextLength: 32000 } }] } });
+    console.log("provider \"unreachable\" configured (model: unreachable/model, endpoint http://127.0.0.1:9/v1)");
+  }
   if (arg("providers")) {
     const file = JSON.parse(fs.readFileSync(path.resolve(arg("providers")), "utf8"));
     for (const manifest of file.providers ?? []) {

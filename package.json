@@ -197,7 +197,7 @@
         },
         "teslaForge.toolResponseCapChars": {
           "type": "number",
-          "default": 8000,
+          "default": 6000,
           "description": "Cap (characters) on every later search or read tool response."
         },
         "teslaForge.testCommands": {
@@ -236,6 +236,7 @@
     "test:host": "node scripts/host-test.mjs",
     "trueforge": "node scripts/start-trueforge.mjs",
     "context": "node dist-test/context-cli.js",
+    "task": "node dist-test/task-run.js",
     "mock-model": "node scripts/mock-model.mjs",
     "setup:agent": "node scripts/setup-trueforge.mjs"
   },

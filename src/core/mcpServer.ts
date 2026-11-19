@@ -1,6 +1,8 @@
 // The editor's capabilities, exposed to the TrueForge agent as MCP tools over local HTTP.
 // TrueForge decides when to call them; this server only answers for the active workspace.
+import fs from "node:fs";
 import http from "node:http";
+import path from "node:path";
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -109,7 +111,7 @@ export function buildTools(host: ToolHost): McpServer {
     "run_tests",
     {
       description:
-        "Run a local test command in the workspace root after the user approves it (for example `python -m pytest tests/test_x.py -q`). Only allow-listed test runners, no shell operators. Runs against files on disk, so edits staged in this turn are not included until the user applies them.",
+        "Run a local test command in the workspace root after the user approves it (for example `python -m pytest tests/test_x.py -q`). Only allow-listed test runners, no shell operators. Edits the user has accepted in this turn are included: they are put in place for the duration of the run and restored afterwards. Use it after proposing a change to check that the new or affected tests pass, and fix failures with another propose_edit.",
       inputSchema: { command: z.string() },
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
@@ -119,9 +121,32 @@ export function buildTools(host: ToolHost): McpServer {
         const v = validateTestCommand(args.command, cfg.allowed);
         if (!v.ok) return fail(v.error);
         if (!host.store.consumeCommand(args.command)) return fail("This command was not approved in the editor, so it was not run.");
-        const r = await runTestCommand(v.argv, root, cfg.timeoutMs, Math.floor(host.toolCapChars() * 0.8), host.runSignal());
+        // Edits the user accepted in this turn are staged in memory. So the agent can check them,
+        // they are written to disk for the duration of this approved test run only, then the exact
+        // previous bytes are restored (also on Stop, timeout or error). Files whose disk content
+        // differs from what was reviewed (unsaved editor changes) are left alone.
+        const restore: Array<[string, Buffer]> = [];
+        const skipped: string[] = [];
+        let r;
+        try {
+          for (const f of host.store.stagedFiles()) {
+            const abs = path.join(root, f.path);
+            const before = fs.readFileSync(abs);
+            if (before.toString("utf8") !== f.baseText) {
+              skipped.push(f.path);
+              continue;
+            }
+            restore.push([abs, before]);
+            fs.writeFileSync(abs, f.stagedText);
+          }
+          r = await runTestCommand(v.argv, root, cfg.timeoutMs, Math.floor(host.toolCapChars() * 0.8), host.runSignal());
+        } finally {
+          for (const [abs, bytes] of restore) fs.writeFileSync(abs, bytes);
+        }
         const status = r.timedOut ? `timed out after ${cfg.timeoutMs / 1000}s` : `exit code ${r.exitCode}`;
-        return ok(`$ ${args.command}\n[${status}; ran against files on disk]\n${r.output}`);
+        const scope = restore.length ? `ran with your staged edits to ${restore.length} file(s) in place, then restored` : "ran against files on disk";
+        const note = skipped.length ? `\nNote: staged edits to ${skipped.join(", ")} were not included because the file has unsaved changes.` : "";
+        return ok(`$ ${args.command}\n[${status}; ${scope}]${note}\n${r.output}`);
       })(),
   );
 

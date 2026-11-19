@@ -32,6 +32,8 @@ export interface RunCallbacks {
   toolCall(call: ToolCallInfo): void;
   toolResult(toolCallId: string, content: string): void;
   approval(attempt: Attempt, call: ToolCallInfo): Promise<ApprovalDecision>;
+  /** The provider rate-limited the model; the same session continues after waitMs. */
+  rateLimited?(attempt: Attempt, waitMs: number): void;
 }
 
 export interface RunOptions {
@@ -53,6 +55,8 @@ export interface RunResult {
 }
 
 const TRANSIENT = /\b(408|409|425|429|5\d\d)\b|time[d ]?out|ECONN|ENOTFOUND|EAI_AGAIN|cannot connect|fetch failed|socket|overloaded|rate.?limit|temporar|unavailable|terminated/i;
+
+const RATE_LIMIT = /429|rate.?limit|quota|resource.?exhausted|too many requests/i;
 
 let runSeq = 0;
 
@@ -130,8 +134,18 @@ export class AgentRun {
       this.attempts.push(attempt);
       this.current = attempt;
       this.cb.attemptStarted(attempt);
-      const outcome = await this.runAttempt(attempt, reuseSession);
+      let outcome = await this.runAttempt(attempt, reuseSession, this.opts.prompt);
       reuseSession = undefined;
+      // Rate limited ("429 … retry in 41s"): wait as asked and continue the SAME session with a new
+      // turn, which TrueForge chains on the history so far. Hunks the user already reviewed in this
+      // attempt stay valid because the attempt (and its run id) is unchanged. Other failures fall through.
+      for (let resumes = 0; outcome.status === "error" && attempt.sessionId && !this.cancelled && resumes < (/retry in [0-9.]+ *s/i.test(outcome.message) ? 6 : 1) && RATE_LIMIT.test(outcome.message); resumes++) {
+        const asked = /retry in ([\d.]+)\s*s/i.exec(outcome.message);
+        const waitMs = Math.min(65_000, Math.max(5_000, asked ? Math.ceil(Number(asked[1])) * 1000 + 1000 : 20_000));
+        this.cb.rateLimited?.(attempt, waitMs);
+        if (!(await this.sleep(waitMs))) return { status: "cancelled", attempts: this.attempts, final: attempt };
+        outcome = await this.runAttempt(attempt, attempt.sessionId, "You were interrupted by a provider rate limit. Continue the task from where you stopped; do not repeat edits that were already accepted.");
+      }
       if (this.cancelled || outcome.status === "cancelled") return { status: "cancelled", attempts: this.attempts, final: attempt };
       if (outcome.status !== "error") return { status: "done", attempts: this.attempts, final: attempt };
 
@@ -141,7 +155,9 @@ export class AgentRun {
       let next: { kind: Attempt["kind"]; agent: string; waitMs: number; note: string } | undefined;
       if (outcome.harnessDown) next = undefined;
       else if (kind !== "fallback" && outcome.transient && retriesLeft > 0) {
-        const waitMs = (this.opts.backoffMs ?? 1000) * 2 ** (this.opts.maxRetries - retriesLeft);
+        // Exponential backoff, but never sooner than the provider asks ("retry in 41s"), capped at 65 s.
+        const asked = /retry in ([\d.]+)\s*s/i.exec(outcome.message);
+        const waitMs = Math.min(65_000, Math.max((this.opts.backoffMs ?? 1000) * 2 ** (this.opts.maxRetries - retriesLeft), asked ? Math.ceil(Number(asked[1])) * 1000 : 0));
         retriesLeft--;
         next = { kind: "retry", agent, waitMs, note: `retrying in ${(waitMs / 1000).toFixed(1)}s` };
       } else if (kind !== "fallback" && fallback) {
@@ -149,23 +165,26 @@ export class AgentRun {
       }
       this.cb.attemptFailed(attempt, next?.note);
       if (!next) return { status: "error", error: errors.join("\n"), attempts: this.attempts, final: attempt };
-      if (next.waitMs) {
-        await new Promise<void>((resolve) => {
-          const timer = setTimeout(resolve, next!.waitMs);
-          this.wakeBackoff = () => {
-            clearTimeout(timer);
-            resolve();
-          };
-        });
-        this.wakeBackoff = undefined;
-        if (this.cancelled) return { status: "cancelled", attempts: this.attempts, final: attempt };
-      }
+      if (next.waitMs && !(await this.sleep(next.waitMs))) return { status: "cancelled", attempts: this.attempts, final: attempt };
       kind = next.kind;
       agent = next.agent;
     }
   }
 
-  private async runAttempt(attempt: Attempt, reuseSession: string | undefined): Promise<{ status: "done" | "cancelled" } | { status: "error"; message: string; transient: boolean; harnessDown: boolean }> {
+  /** Wait, waking early on Stop. Resolves false if the run was cancelled meanwhile. */
+  private async sleep(ms: number): Promise<boolean> {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, ms);
+      this.wakeBackoff = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+    });
+    this.wakeBackoff = undefined;
+    return !this.cancelled;
+  }
+
+  private async runAttempt(attempt: Attempt, reuseSession: string | undefined, prompt: string): Promise<{ status: "done" | "cancelled" } | { status: "error"; message: string; transient: boolean; harnessDown: boolean }> {
     const live = () => !this.cancelled && this.current === attempt;
     try {
       if (reuseSession) {
@@ -179,7 +198,7 @@ export class AgentRun {
       const sessionId = attempt.sessionId!;
       const stream = await this.client.sessions.createTurnStream(
         sessionId,
-        { input: [{ type: "user.message", content: this.opts.prompt }] },
+        { input: [{ type: "user.message", content: prompt }] },
         { timeoutInSeconds: 3600, maxRetries: 0, abortSignal: this.abort.signal },
       );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
