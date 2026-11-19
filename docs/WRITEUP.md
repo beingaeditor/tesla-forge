@@ -8,7 +8,7 @@ Team Tesla · Techfest Team ID TM-DC7A5C65F5C · Repository: https://github.com/
 
 | Member | College or employer | GitHub |
 | --- | --- | --- |
-| Sameer Verma | **[FILL]** | [beingaeditor](https://github.com/beingaeditor) |
+| Sameer Verma | IIIT Delhi (IIITD) | [beingaeditor](https://github.com/beingaeditor) |
 | **[FILL: other members, or delete this row]** | | |
 
 ## 2. Starting point
@@ -69,7 +69,7 @@ Models are configured only in TrueForge, as a catalog provider or an OpenAI-comp
 
 ## 7. Tools used
 
-- Claude Fable 5.2 through Claude Code (AI coding assistant) for implementation, tests and drafting this document. **[FILL: any other assistants or tools the team used]**
+- Claude Fable 5.2 and Claude Opus 5.5 through Claude Code (AI coding assistants) for implementation, tests, real-model verification and drafting this document. **[FILL: any other assistants or tools the team used]**
 - TrueForge 0.185.1 and its TypeScript SDK 0.185.0; Model Context Protocol TypeScript SDK 1.32.2; VS Code 1.144; Node.js 24; esbuild; TypeScript; `@vscode/test-electron`.
 
 ## 8. Known limitations and what we would do with another month
