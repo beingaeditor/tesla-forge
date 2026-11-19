@@ -4,11 +4,11 @@
 
 ## 1. Team
 
-Team Tesla · Techfest Team ID TM-DC7A5C65F5C
+Team Tesla · Techfest Team ID TM-DC7A5C65F5C · Repository: https://github.com/beingaeditor/tesla-forge
 
 | Member | College or employer | GitHub |
 | --- | --- | --- |
-| Sameer Verma | **[FILL]** | **[FILL]** |
+| Sameer Verma | **[FILL]** | [beingaeditor](https://github.com/beingaeditor) |
 | **[FILL: other members, or delete this row]** | | |
 
 ## 2. Starting point
