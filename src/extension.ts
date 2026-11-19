@@ -145,7 +145,24 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   // ---- Inline edit -------------------------------------------------------------------------
-  async function inlineEdit(arg?: { instruction?: string }) {
+  /** For the recorded demo: show the real instruction box and type the text into it visibly. */
+  async function typeIntoInputBox(title: string, text: string): Promise<string> {
+    const box = vscode.window.createInputBox();
+    box.title = title;
+    box.prompt = "Describe the change for the selected lines";
+    box.ignoreFocusOut = true;
+    box.show();
+    for (let i = 1; i <= text.length; i++) {
+      box.value = text.slice(0, i);
+      await new Promise((r) => setTimeout(r, 22));
+    }
+    await new Promise((r) => setTimeout(r, 700));
+    box.hide();
+    box.dispose();
+    return text;
+  }
+
+  async function inlineEdit(arg?: { instruction?: string; typeInstruction?: boolean }) {
     const editor = vscode.window.activeTextEditor;
     const rel = editor ? relOf(editor.document.uri) : undefined;
     if (!editor || !rel) return void vscode.window.showWarningMessage("Tesla Forge: open a file from the workspace and select the code to edit.");
@@ -155,7 +172,9 @@ export async function activate(context: vscode.ExtensionContext) {
     const startLine = sel.start.line + 1;
     const endLine = sel.end.character === 0 && sel.end.line > sel.start.line ? sel.end.line : sel.end.line + 1;
     const text = editor.document.getText(new vscode.Range(startLine - 1, 0, endLine - 1, editor.document.lineAt(endLine - 1).text.length));
-    const instruction = arg?.instruction ?? (await vscode.window.showInputBox({ title: `Tesla Forge inline edit · ${rel}:${startLine}-${endLine}`, prompt: "Describe the change for the selected lines", ignoreFocusOut: true }));
+    const instruction = arg?.instruction && arg.typeInstruction
+      ? await typeIntoInputBox(`Tesla Forge inline edit · ${rel}:${startLine}-${endLine}`, arg.instruction)
+      : arg?.instruction ?? (await vscode.window.showInputBox({ title: `Tesla Forge inline edit · ${rel}:${startLine}-${endLine}`, prompt: "Describe the change for the selected lines", ignoreFocusOut: true }));
     if (!instruction?.trim()) return;
 
     const result = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Tesla Forge", cancellable: true }, async (progress, cancel) => {
@@ -211,7 +230,7 @@ export async function activate(context: vscode.ExtensionContext) {
   host.changed();
 
   // Handle used by the extension-host test suite.
-  return { controller, reviews, mcpUrl: mcp.url, registerTools, setConfirmCommand: (fn: (command: string) => Promise<boolean>) => (confirmCommand = fn) };
+  return { controller, reviews, panel, mcpUrl: mcp.url, registerTools, setConfirmCommand: (fn: (command: string) => Promise<boolean>) => (confirmCommand = fn) };
 }
 
 export function deactivate() {}

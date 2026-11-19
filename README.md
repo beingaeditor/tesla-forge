@@ -115,6 +115,7 @@ npm run test:integration  # core against a real TrueForge, with a scripted mock 
 npm run test:host         # the extension inside a real VS Code window
 npm run context -- /path/to/repo "your prompt"   # preview the selected context, no model needed
 npm run task -- /path/to/repo tesla-forge "your prompt"   # run a request headless against the real agent (accepts and applies every hunk)
+node scripts/record-demo.mjs --flask /path/to/flask --ffmpeg /path/to/ffmpeg   # record the demo video (scripted VS Code session, real agent; records the whole screen)
 ```
 
 The mock model (`scripts/mock-model.mjs`) replays scripted responses so that streaming, approvals, cancellation and provider failure can be tested offline. It is test tooling only and is not used for the demo.

@@ -1,7 +1,5 @@
 # Tesla Forge: Round 1 write-up
 
-> Draft. Items marked **[FILL]** need real values from the recorded demo or from the team before this is exported to PDF (target: 3 pages).
-
 ## 1. Team
 
 Team Tesla · Techfest Team ID TM-DC7A5C65F5C · Repository: https://github.com/beingaeditor/tesla-forge
@@ -50,7 +48,7 @@ The panel shows the selected files, line ranges, reasons, and budget used for ev
 | Gemma 4 31B (`google-gemini/gemma-4-31b-it`) | same provider, free tier | fallback for Tasks A and B | $0 |
 | Gemini 3.6 Flash and 3.5 Flash | same provider, free tier | early trials; free daily request cap reached | $0 |
 
-For Task C the primary agent is pointed at a provider whose endpoint is unreachable: `npm run setup:agent -- --add-unreachable-provider --model unreachable/model --fallback-model google-gemini/gemini-flash-lite-latest`.
+In the recorded take the primary agent had been left pointed at the unreachable endpoint from a previous rehearsal, so Tasks A and B also failed over to the fallback agent (Gemini Flash-Lite) after one retry; the panel shows this. For Task C the primary agent is pointed at a provider whose endpoint is unreachable on purpose: `npm run setup:agent -- --add-unreachable-provider --model unreachable/model --fallback-model google-gemini/gemini-flash-lite-latest`.
 
 Models are configured only in TrueForge, as a catalog provider or an OpenAI-compatible endpoint. To switch, change the model on the agent in the TrueForge UI or rerun `npm run setup:agent -- --model <provider>/<model>`. The extension has no model setting. A scripted mock endpoint was used for automated tests only; it is not a model and is not shown in the demo.
 
@@ -58,19 +56,19 @@ Models are configured only in TrueForge, as a catalog provider or an OpenAI-comp
 
 | Criterion | Video time | Claim |
 | --- | --- | --- |
-| A1 Inline edit | **[FILL]** | Selection, keybinding, instruction; diff rendered in the editor with per-hunk accept and reject. |
-| A2 Agent mode | **[FILL]** | Task B: the agent discovers and edits three or more files that the prompt does not name. |
-| A3 Streaming and cancellation | **[FILL]** | Tokens stream from TrueForge events; Stop is immediate and `git status` is clean afterwards. |
-| B1 Context assembly | **[FILL]** | Budgeted retrieval; the panel lists the chosen files and why during Task B. |
-| B2 Diff safety | **[FILL]** | Per-hunk review, nothing written before Apply, and a working undo shown on screen. |
-| B3 Resilience | **[FILL]** | Unreachable endpoint: one retry, then automatic fallback to a second configured model with no user action; workspace unchanged. |
-| B4 TrueForge integration depth | **[FILL]** | MCP tools, TrueForge approval driving diff review, and deferred tool loading visible in the session. |
-| C1 Video | whole video | Tasks A, B, C in order, each verified on screen. |
+| A1 Inline edit | 0:03–0:31 | Selection, keybinding, instruction; diff rendered in the editor with per-hunk accept and reject. |
+| A2 Agent mode | 0:31–2:35 | Task B: the agent discovers and edits three or more files that the prompt does not name. |
+| A3 Streaming and cancellation | 3:00–3:13 | Tokens stream from TrueForge events; Stop is immediate and `git status` is clean afterwards. |
+| B1 Context assembly | 0:36 | Budgeted retrieval; the panel lists the chosen files and why during Task B. |
+| B2 Diff safety | 0:14 (per hunk), 0:28 (undo) | Per-hunk review, nothing written before Apply, and a working undo shown on screen. |
+| B3 Resilience | 2:35–3:00 | Unreachable endpoint: one retry, then automatic fallback to a second configured model with no user action; workspace unchanged. |
+| B4 TrueForge integration depth | 2:05 (session), 0:40 (deferred calls in panel) | MCP tools, TrueForge approval driving diff review, and deferred tool loading visible in the session. |
+| C1 Video | 0:00–3:13 | Tasks A, B, C in order, each verified on screen (`False`; 57 passed, `config` in help, masked JSON; clean `git status`). |
 | C2 Write-up | this document | Architecture, context strategy, model setup, trade-offs, scorecard, limitations. |
 
 ## 7. Tools used
 
-- Claude Fable 5.2 and Claude Opus 5.5 through Claude Code (AI coding assistants) for implementation, tests, real-model verification and drafting this document. No other AI assistants were used.
+- Claude Fable 5.2 and Claude Opus 5.5 through Claude Code (AI coding assistants) for implementation, tests, real-model verification and drafting this document. No other AI assistants were used. The demo video was recorded by a script (`scripts/record-demo.mjs`, `test/host/demo.ts`) that types the exact rulebook prompts into the extension's own input boxes, presses review buttons through the extension's commands, and runs the verification commands in VS Code's terminal; the agent's reading, edits and test runs are unscripted, and only model waiting time after each first diff is cut.
 - TrueForge 0.185.1 and its TypeScript SDK 0.185.0; Model Context Protocol TypeScript SDK 1.32.2; VS Code 1.144; Node.js 24; esbuild; TypeScript; `@vscode/test-electron`.
 
 ## 8. Known limitations and what we would do with another month

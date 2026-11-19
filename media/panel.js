@@ -93,6 +93,20 @@
   }
 
   window.addEventListener("message", (ev) => {
+    if (ev.data?.type === "demoType") {
+      const text = String(ev.data.text ?? "");
+      let i = 0;
+      input.focus();
+      const timer = setInterval(() => {
+        input.value = text.slice(0, ++i);
+        input.scrollTop = input.scrollHeight;
+        if (i >= text.length) {
+          clearInterval(timer);
+          setTimeout(send, 500);
+        }
+      }, 15);
+      return;
+    }
     if (ev.data?.type !== "state") return;
     const s = ev.data.state;
     const log = $("log");

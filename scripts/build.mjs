@@ -16,6 +16,7 @@ if (process.argv.includes("--tests")) {
   await build({ ...common, entryPoints: ["test/integration/integration.ts"], outfile: "dist-test/integration.js" });
   await build({ ...common, entryPoints: ["test/tools/task-run.ts"], outfile: "dist-test/task-run.js" });
   await build({ ...common, entryPoints: ["test/tools/context-cli.ts"], outfile: "dist-test/context-cli.js" });
+  await build({ ...common, entryPoints: ["test/host/demo.ts"], outfile: "dist-test/demo.js", external: ["vscode"] });
   await build({ ...common, entryPoints: ["test/host/suite.ts"], outfile: "dist-test/host-suite.js", external: ["vscode"] });
 }
 console.log("build ok");

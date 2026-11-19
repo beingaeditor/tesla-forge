@@ -71,6 +71,13 @@ export class AgentPanel implements vscode.WebviewViewProvider {
   }
 
   /** Coalesce bursts of streamed tokens into one repaint per frame. */
+  /** For the recorded demo: type the text into the panel's input box visibly, then send it. */
+  async typeAndSend(text: string): Promise<void> {
+    if (!this.view) throw new Error("The agent panel is not open.");
+    await this.view.webview.postMessage({ type: "demoType", text });
+    await new Promise((r) => setTimeout(r, text.length * 18 + 900));
+  }
+
   render(): void {
     if (!this.view || this.timer) return;
     this.timer = setTimeout(() => {
