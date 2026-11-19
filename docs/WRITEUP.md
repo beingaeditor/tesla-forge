@@ -9,7 +9,8 @@ Team Tesla · Techfest Team ID TM-DC7A5C65F5C · Repository: https://github.com/
 | Member | College or employer | GitHub |
 | --- | --- | --- |
 | Sameer Verma | IIIT Delhi (IIITD) | [beingaeditor](https://github.com/beingaeditor) |
-| **[FILL: other members, or delete this row]** | | |
+| Sampoorn | IIIT Delhi (IIITD) | **[FILL]** |
+| Vinayak | IIIT Delhi (IIITD) | **[FILL]** |
 
 ## 2. Starting point
 
